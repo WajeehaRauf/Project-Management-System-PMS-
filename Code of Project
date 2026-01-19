@@ -1,0 +1,300 @@
+#include <iostream>
+#include <vector>
+#include <map>
+#include <fstream>
+#include <stdexcept>
+
+using namespace std;
+
+// ================= TASK CLASS =================
+class Task {
+public:
+    int id;
+    string title;
+    string description;
+    string deadline;
+    string status;
+    string priority;
+    string assignedMember;
+
+    Task() {
+        status = "Pending";
+        assignedMember = "None";
+    }
+};
+
+// ================= TEAM MEMBER CLASS =================
+class TeamMember {
+public:
+    string name;
+};
+
+// ================= PROJECT CLASS =================
+class Project {
+public:
+    int projectId;
+    string projectName;
+    vector<Task> tasks;
+    vector<TeamMember> members;
+};
+
+// ================= PROJECT MANAGER =================
+class ProjectManager {
+private:
+    map<int, Project> projects;
+
+public:
+    void createProject();
+    void viewProjects();
+    void manageProject();
+    void saveToFile();
+    void loadFromFile();
+};
+
+// ================= CREATE PROJECT =================
+void ProjectManager::createProject() {
+    Project p;
+    cout << "Enter Project ID: ";
+    cin >> p.projectId;
+    cin.ignore();
+
+    cout << "Enter Project Name: ";
+    getline(cin, p.projectName);
+
+    projects[p.projectId] = p;
+    cout << "Project Created Successfully!\n";
+}
+
+// ================= VIEW PROJECTS =================
+void ProjectManager::viewProjects() {
+    if (projects.empty()) {
+        cout << "No projects available.\n";
+        return;
+    }
+
+    for (auto &p : projects) {
+        cout << "ID: " << p.first << " | Name: " << p.second.projectName << endl;
+    }
+}
+
+// ================= MANAGE PROJECT =================
+void ProjectManager::manageProject() {
+    int id;
+    cout << "Enter Project ID to manage: ";
+    cin >> id;
+
+    if (projects.find(id) == projects.end()) {
+        cout << "Project not found!\n";
+        return;
+    }
+
+    Project &p = projects[id];
+    int choice;
+
+    do {
+        cout << "\n--- Managing Project: " << p.projectName << " ---\n";
+        cout << "1. Add Task\n";
+        cout << "2. View Tasks\n";
+        cout << "3. Update Task Status\n";
+        cout << "4. Add Team Member\n";
+        cout << "5. Assign Task to Member\n";
+        cout << "6. Project Report\n";
+        cout << "0. Back\n";
+        cout << "Choice: ";
+        cin >> choice;
+        cin.ignore();
+
+        if (choice == 1) {
+            Task t;
+            cout << "Task ID: ";
+            cin >> t.id;
+            cin.ignore();
+
+            cout << "Title: ";
+            getline(cin, t.title);
+
+            cout << "Description: ";
+            getline(cin, t.description);
+
+            cout << "Deadline: ";
+            getline(cin, t.deadline);
+
+            cout << "Priority (Low/Medium/High): ";
+            getline(cin, t.priority);
+
+            p.tasks.push_back(t);
+            cout << "Task Added!\n";
+        }
+
+        else if (choice == 2) {
+            for (auto &t : p.tasks) {
+                cout << "\nID: " << t.id
+                     << "\nTitle: " << t.title
+                     << "\nDeadline: " << t.deadline
+                     << "\nPriority: " << t.priority
+                     << "\nStatus: " << t.status
+                     << "\nAssigned To: " << t.assignedMember << endl;
+            }
+        }
+
+        else if (choice == 3) {
+            int tid;
+            cout << "Enter Task ID: ";
+            cin >> tid;
+
+            for (auto &t : p.tasks) {
+                if (t.id == tid) {
+                    t.status = "Completed";
+                    cout << "Task Marked Completed!\n";
+                }
+            }
+        }
+
+        else if (choice == 4) {
+            TeamMember m;
+            cout << "Enter Member Name: ";
+            getline(cin, m.name);
+            p.members.push_back(m);
+            cout << "Member Added!\n";
+        }
+
+        else if (choice == 5) {
+            int tid;
+            string name;
+            cout << "Enter Task ID: ";
+            cin >> tid;
+            cin.ignore();
+
+            cout << "Enter Member Name: ";
+            getline(cin, name);
+
+            for (auto &t : p.tasks) {
+                if (t.id == tid) {
+                    t.assignedMember = name;
+                    cout << "Task Assigned!\n";
+                }
+            }
+        }
+
+        else if (choice == 6) {
+            int completed = 0;
+            for (auto &t : p.tasks) {
+                if (t.status == "Completed")
+                    completed++;
+            }
+
+            float percent = (p.tasks.empty()) ? 0 :
+                (completed * 100.0 / p.tasks.size());
+
+            cout << "Total Tasks: " << p.tasks.size() << endl;
+            cout << "Completed Tasks: " << completed << endl;
+            cout << "Completion Percentage: " << percent << "%\n";
+        }
+
+    } while (choice != 0);
+}
+
+// ================= SAVE TO FILE =================
+void ProjectManager::saveToFile() {
+    ofstream file("projects.txt");
+    if (!file)
+        throw runtime_error("File Error!");
+
+    file << projects.size() << endl;
+
+    for (auto &p : projects) {
+        file << p.second.projectId << endl;
+        file << p.second.projectName << endl;
+        file << p.second.tasks.size() << endl;
+
+        for (auto &t : p.second.tasks) {
+            file << t.id << endl
+                 << t.title << endl
+                 << t.description << endl
+                 << t.deadline << endl
+                 << t.status << endl
+                 << t.priority << endl
+                 << t.assignedMember << endl;
+        }
+    }
+    file.close();
+    cout << "Data Saved Successfully!\n";
+}
+
+// ================= LOAD FROM FILE =================
+void ProjectManager::loadFromFile() {
+    ifstream file("projects.txt");
+    if (!file) {
+        cout << "No saved data found.\n";
+        return;
+    }
+
+    projects.clear();
+    int projectCount;
+    file >> projectCount;
+    file.ignore();
+
+    for (int i = 0; i < projectCount; i++) {
+        Project p;
+        file >> p.projectId;
+        file.ignore();
+        getline(file, p.projectName);
+
+        int taskCount;
+        file >> taskCount;
+        file.ignore();
+
+        for (int j = 0; j < taskCount; j++) {
+            Task t;
+            file >> t.id;
+            file.ignore();
+            getline(file, t.title);
+            getline(file, t.description);
+            getline(file, t.deadline);
+            getline(file, t.status);
+            getline(file, t.priority);
+            getline(file, t.assignedMember);
+
+            p.tasks.push_back(t);
+        }
+        projects[p.projectId] = p;
+    }
+    file.close();
+    cout << "Data Loaded Successfully!\n";
+}
+
+// ================= MAIN FUNCTION =================
+int main() {
+    ProjectManager pm;
+    int choice;
+
+    try {
+        do {
+            cout << "\n===== PROJECT MANAGEMENT SYSTEM =====\n";
+            cout << "1. Create Project\n";
+            cout << "2. View Projects\n";
+            cout << "3. Manage Project\n";
+            cout << "4. Save Data\n";
+            cout << "5. Load Data\n";
+            cout << "0. Exit\n";
+            cout << "Choice: ";
+            cin >> choice;
+
+            switch (choice) {
+                case 1: pm.createProject(); break;
+                case 2: pm.viewProjects(); break;
+                case 3: pm.manageProject(); break;
+                case 4: pm.saveToFile(); break;
+                case 5: pm.loadFromFile(); break;
+                case 0: cout << "Exiting...\n"; break;
+                default: cout << "Invalid Choice!\n";
+            }
+
+        } while (choice != 0);
+    }
+    catch (exception &e) {
+        cout << "Error: " << e.what();
+    }
+
+    return 0;
+}
